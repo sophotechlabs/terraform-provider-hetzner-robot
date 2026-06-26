@@ -42,3 +42,22 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+
+# Go / provider build artifacts
+/dist/
+/terraform-provider-hetzner-robot
+*.test
+*.prof
+coverage.out
+coverage.html
+vendor/
+
+# Local dev override + scratch (gitignored, never committed)
+nocommit/
+.terraform.lock.hcl
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
