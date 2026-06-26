@@ -1,0 +1,35 @@
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*_test.go"
+          - tests/**
+
+go:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.go"
+          - go.mod
+          - go.sum
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - docs/**
+          - examples/**
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - go.mod
+          - go.sum
+
+release:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .goreleaser.yml
+          - .github/workflows/release.yml
