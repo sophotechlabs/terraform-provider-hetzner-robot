@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build:
+    name: Build provider
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,10 +26,14 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - run: go mod download
-      - run: go build -v .
+      - name: Download modules
+        run: go mod download
+
+      - name: Compile provider binary
+        run: go build -v .
 
   generate:
+    name: Generated docs & code up to date
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,14 +47,16 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - run: go generate ./...
+      - name: Regenerate docs (tfplugindocs) & code
+        run: go generate ./...
 
-      - name: Verify no generated changes
+      - name: Fail if committed output is stale
         run: |
           git diff --compact-summary --exit-code || \
-            (echo "::error::Unexpected diff after go generate. Run 'go generate ./...' and commit."; exit 1)
+            (echo "::error::Generated files are out of date. Run 'go generate ./...' and commit the result (check examples/**/import.sh is tracked)."; exit 1)
 
   lint:
+    name: Lint (golangci-lint)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -64,6 +71,7 @@ jobs:
           version: v2.12.2
 
   test:
+    name: Unit & acceptance tests
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -78,8 +86,11 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - run: go mod download
-      - run: TF_ACC=1 go test -v -coverprofile=coverage.out ./...
+      - name: Download modules
+        run: go mod download
+
+      - name: Run tests (TF_ACC against httptest mock)
+        run: TF_ACC=1 go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         if: github.event_name == 'push'

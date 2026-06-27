@@ -61,3 +61,5 @@ nocommit/
 .idea/
 *.swp
 .DS_Store
+
+!examples/**/import.sh
