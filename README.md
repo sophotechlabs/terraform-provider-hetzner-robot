@@ -8,7 +8,7 @@ A Terraform provider for the **Hetzner Robot webservice** — the dedicated-serv
 
 Robot manages physical dedicated servers: the switch-level firewall, rescue boot configuration, reverse DNS, and the SSH key store. This provider lets Terraform own that **declarative** Robot state with a reviewable `plan`/`apply` and drift detection, instead of shelling REST calls through ad-hoc scripts. No first-party Terraform provider exists for the Robot API.
 
-> **Status: early development.** `v0.1.x` ships a scaffolding `hrobot_meta` data source while the release/publish pipeline is established. Real Hetzner Robot resources land in subsequent releases — see [Roadmap](#roadmap).
+> **Status: early development.** `v0.2.x` is the first functional release: Basic-Auth provider configuration, the `hrobot_server` data source (read server facts by number or IP), and the `hrobot_ssh_key` resource (manage keys in the Robot key store, with import). It supersedes the `v0.1.x` scaffold, whose placeholder `hrobot_meta` data source has been removed. More declarative Robot resources land in subsequent releases — see [Roadmap](#roadmap).
 
 ## Usage
 
@@ -17,25 +17,37 @@ terraform {
   required_providers {
     hrobot = {
       source  = "sophotechlabs/hetzner-robot"
-      version = "~> 0.1"
+      version = "~> 0.2"
     }
   }
 }
 
-provider "hrobot" {}
+provider "hrobot" {
+  username = "your-webservice-user"
+  password = var.hrobot_password
+}
 
-data "hrobot_meta" "current" {}
+data "hrobot_server" "lab" {
+  ip = "176.9.18.203"
+}
 
-output "provider_version" {
-  value = data.hrobot_meta.current.version
+resource "hrobot_ssh_key" "lab" {
+  name       = "k3s-lab"
+  public_key = file("~/.ssh/id_ed25519.pub")
+}
+
+output "server_product" {
+  value = data.hrobot_server.lab.product
 }
 ```
+
+Credentials can also come from the `HROBOT_USERNAME` / `HROBOT_PASSWORD` environment variables, in which case the `provider "hrobot" {}` block can be left empty.
 
 The published package is `sophotechlabs/hetzner-robot`; the local provider name and all resources use the clean `hrobot` prefix (e.g. `hrobot_ssh_key`). A hyphenated source with a hyphen-free local name is a supported registry pattern (precedent: `hashicorp/google-beta`).
 
 ## Authentication
 
-When real resources land, the provider authenticates against the Robot webservice with HTTP Basic Auth using a dedicated **webservice user** (Robot UI → Settings → "Web service and app settings" — *not* the main account login), via `HROBOT_USERNAME` / `HROBOT_PASSWORD`. The scaffolding `hrobot_meta` data source needs no credentials.
+The provider authenticates against the Robot webservice with HTTP Basic Auth using a dedicated **webservice user** (Robot UI → Settings → "Web service and app settings" — *not* the main account login). Set `username` / `password` in the provider block or via the `HROBOT_USERNAME` / `HROBOT_PASSWORD` environment variables; the provider fails fast if neither is present. Three failed logins trigger a 10-minute IP block, so the client never retries on an authentication failure.
 
 ## Local development
 
@@ -63,11 +75,10 @@ make generate       # regenerate docs/ with tfplugindocs
 
 | Version | Scope |
 |---|---|
-| `v0.1` | Scaffold + hello-world `hrobot_meta` data source + signed publish pipeline |
-| `v0.2` | Robot client + Basic Auth; `hrobot_server` data source (read server facts) |
-| `v0.3` | `hrobot_ssh_key` resource (`/key`, keyed by fingerprint) + import |
-| `v0.4` | `hrobot_firewall` resource (switch-level, with a required return-traffic ack rule) |
-| `v0.5` | `hrobot_rescue` (rescue boot config) and `hrobot_rdns` (reverse DNS) resources |
+| `v0.1` | Scaffold + signed publish pipeline (superseded; the `hrobot_meta` placeholder was removed in `v0.2`) |
+| `v0.2` | Robot client + Basic Auth; `hrobot_server` data source (read server facts); `hrobot_ssh_key` resource (`/key`, keyed by fingerprint) + import |
+| `v0.3` | `hrobot_firewall` resource (switch-level, with a required return-traffic ack rule) |
+| `v0.4` | `hrobot_rescue` (rescue boot config) and `hrobot_rdns` (reverse DNS) resources |
 | later  | `hrobot_reset` as a Terraform action (imperative reset stays out of declarative state) |
 
 ## Non-goals
